@@ -9,6 +9,10 @@
 
 using namespace std;
 
+
+int sendData(int sock, char *buffer, int msg_size);
+
+
 int main(int argc, char *argv[])
 {
     int client_sock;
@@ -17,9 +21,8 @@ int main(int argc, char *argv[])
     char outBuffer[MAX_MSG_SIZE];
     char msg[MAX_MSG_SIZE];
     int bytesRcv;
-    int bytesSent;
 
-    bool hasMsg = false;
+    bool hasMsg = false;                        /// Flag that makes sure that the client has data to transform
 
     /// Check for argument errors
     if (argc != 3)
@@ -36,6 +39,8 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+
+    /// Free up the port
     int yes = 1;
     if (setsockopt(client_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(yes)) < 0)
     {
@@ -56,9 +61,13 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    bool terminate = false;
+
+    /// Run until client exits
     while (!terminate)
     {
+        memset(&inBuffer, 0, sizeof(inBuffer));
+        memset(&outBuffer, 0, sizeof(outBuffer));
+
         cout << "Actions" << endl
              << "0 - Exit" << endl
              << "1 - Set message" << endl
@@ -66,47 +75,54 @@ int main(int argc, char *argv[])
              << "Please enter an option: ";
         fgets(msg, MAX_MSG_SIZE, stdin);
 
-        if (strncmp(msg, "0", 1) == 0)
+        if (strncmp(msg, "0", 1) == 0)                          /// Case when client wants to exit
         {
             cout << "client: Shutting down service" << endl;
             strcpy(outBuffer, "EXT");
-            bytesSent = send(client_sock, (char *)&outBuffer, strlen(outBuffer), 0);
-            if (bytesSent < 0 || bytesSent != strlen(outBuffer))
-            {
-                cout << "client: error in sending" << endl;
+
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
+                cerr << "client: Might not be disconnected from server" << endl;
+                close(client_sock);
+                exit(1);
             }
 
-            exit(1);
+            close(client_sock);
+            exit(0);
         }
-        else if (strncmp(msg, "1", 1) == 0)
+        else if (strncmp(msg, "1", 1) == 0)                    /// Case when client wants to set new data
         {
             strcpy(outBuffer, "SET");
             cout << "Enter message:" << endl;
             fgets(msg, MAX_MSG_SIZE, stdin);
             strncat(outBuffer, msg, strlen(msg));
 
-            bytesSent = send(client_sock, (char *)&outBuffer, strlen(outBuffer), 0);
-            if (bytesSent < 0 || bytesSent != strlen(outBuffer))
-            {
-                cout << "client: error in sending" << endl;
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
+                cerr << "client: could not send message to master server" << endl;
+                close(client_sock);
                 exit(1);
             }
+
             hasMsg = true;
         }
-        else if (strncmp(msg, "2", 1) == 0)
+        else if (strncmp(msg, "2", 1) == 0)                   /// Case when client wants to transform data
         {
+            if ( !hasMsg ) {                                  /// Case when client does not have data to transform
+                cout << "client: You do not have data to transform" << endl;
+                continue;
+            }
+
             strcpy(outBuffer, "TRN");
             cout << "Enter transformation sequence:" << endl;
             fgets(msg, MAX_MSG_SIZE, stdin);
             strncat(outBuffer, msg, strlen(msg));
 
-            bytesSent = send(client_sock, (char *)&outBuffer, strlen(outBuffer), 0);
-            if (bytesSent < 0 || bytesSent != strlen(outBuffer))
-            {
-                cout << "client: error in sending" << endl;
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
+                cerr << "client: could not send transformation sequence to  master server" << endl;
+                close(client_sock);
                 exit(1);
             }
-            hasMsg = true;
+
+            /// Need to receive data after transformation(s)
         }
         else
         {
@@ -115,4 +131,22 @@ int main(int argc, char *argv[])
     }
 
     return 0;
+}
+
+
+
+/**
+ * 
+ * 
+ * 
+ * 
+ * */
+int sendData(int sock, char *buffer, int msg_size) {
+    int bytesSent = send(sock, buffer, msg_size, 0);
+    if (bytesSent < 0 || bytesSent != strlen(buffer))
+    {
+        cout << "client: error in sending" << endl;
+        return -1;
+    }
+
 }
