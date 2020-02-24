@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
     char outBuffer[MAX_MSG_SIZE];
     char msg[MAX_MSG_SIZE];
     int bytesRcv;
+    bool terminate = false;
 
     bool hasMsg = false;                        /// Flag that makes sure that the client has data to transform
 
@@ -61,6 +62,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    cout << "Here" << endl;
 
     /// Run until client exits
     while (!terminate)
@@ -78,6 +80,7 @@ int main(int argc, char *argv[])
         if (strncmp(msg, "0", 1) == 0)                          /// Case when client wants to exit
         {
             cout << "client: Shutting down service" << endl;
+            terminate = true;
             strcpy(outBuffer, "EXT");
 
             if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
@@ -116,13 +119,18 @@ int main(int argc, char *argv[])
             fgets(msg, MAX_MSG_SIZE, stdin);
             strncat(outBuffer, msg, strlen(msg));
 
-            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1 ) {
                 cerr << "client: could not send transformation sequence to  master server" << endl;
                 close(client_sock);
                 exit(1);
             }
 
-            /// Need to receive data after transformation(s)
+            while ( bytesRcv = recv(client_sock, (char *) &inBuffer, strlen(outBuffer) - 3, 0) > 0 )
+            {
+                cout << "Received: " << inBuffer << endl;
+                memset(&inBuffer, 0, sizeof(inBuffer));
+            }
+
         }
         else
         {
@@ -148,5 +156,5 @@ int sendData(int sock, char *buffer, int msg_size) {
         cout << "client: error in sending" << endl;
         return -1;
     }
-
+    return 0;
 }
