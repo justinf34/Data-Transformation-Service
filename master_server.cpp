@@ -150,133 +150,6 @@ int main(int argc, char *argv[])
             while (1)
             {
 
-                /// Receive client message
-                while ((len = recv(clientSock, (char *)&inBuffer, MAX_MSG_LEN, 0)) > 0)
-                {
-                    if (set_data || set_trans ){
-                        if ( set_data ) { strncat(data, inBuffer, len); }
-                        else { strncat(data, inBuffer, len); }
-                    }
-                    else
-                    {
-                        if ( strncmp(inBuffer, "EXT", 3) == 0 )
-                        {
-                            cout << "Client handler: closing connection with client" << endl;
-                            close(clientSock);
-                            exit(1); 
-                        }
-                        else if ( strncmp(inBuffer, "SET", 3) == 0 )
-                        {
-                            cout << "Client handler: setting data for client";
-                            strcpy(data, inBuffer + 3);
-                            set_data = true;
-                        }
-                        else if ( strncmp(inBuffer, "TRN", 3) == 0 )
-                        {
-                            strcpy(trans, inBuffer + 3);
-                            cout << "Client handler: setting transformation sequence for client" << endl;
-                            set_trans = true;
-                        }
-                        else if ( strncmp(inBuffer, "OFF", 3) == 0 )
-                        {
-                            cout << "Client handler: turning off microservice server" << endl;
-                            /// Turn service off and let client know
-                            /// Need to parse out the service number
-                            /// Send the right signal to the correct pid
-                            /// Let client know if sucess or not
-                            continue;
-                        }
-                        else if ( strncmp(inBuffer, "ONS", 3) == 0 )
-                        {
-                            cout << "Client handler: turning on microservice server" << endl;
-                            /// Turn on service and let client know if successful
-                            /// Need to parse out the service number and port
-                            /// Start the correct process with the right arguments
-                            /// Let the client know if success or not
-                            continue;
-                        }
-                    }
-
-                    memset(&inBuffer, 0, sizeof(inBuffer));
-                }   //// End of receving client msg while loop
-
-
-                if ( set_data ) { set_data = false; }
-
-                else if ( set_trans )
-                {
-                    /// Connect to the correct service
-                    int send_sock;
-                    struct sockaddr_in servAddr;
-                    struct sockaddr_in fromAddr;
-                    unsigned int size;
-
-                    int msgLen;
-                    int bytesSent;
-
-                    /// Create a UDP socket
-                    send_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-                    if ( send_sock < 0)
-                    {
-                        cerr << "Client handler: socket() failed" << endl;
-                        close(clientSock);
-                        exit(1);
-                    }
-
-
-                    /// Free up the port
-                    int opt = 1;
-                    if ( setsockopt(send_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) < 0 )
-                    {
-                        cout << "client handler: setsockopt() failed" << endl;
-                        close(clientSock);
-                        exit(1);
-                    }
-                    
-
-                    /// Initialize server information
-                    memset(&servAddr, 0, sizeof(servAddr));
-                    servAddr.sin_family = AF_INET;
-                    servAddr.sin_port = htons(services[0].port_num);
-                    servAddr.sin_addr.s_addr = inet_addr(services[0].address.c_str());
-
-                    msgLen = strlen(data);
-
-
-                    /// Send data
-                    bytesSent = sendto(send_sock, (char *) &data, msgLen, 0, (struct sockaddr *) &servAddr, sizeof(servAddr));
-                    if ( bytesSent != msgLen )
-                    {
-                        cout << "Client handling: error in sending" << endl;
-                        close(clientSock);
-                        exit(1);
-                    }
-
-                    /// Receive data
-                    byteRcv = 0;
-                    int len;
-                    size = sizeof(fromAddr);
-                    while ( len = recvfrom(send_sock, (char *) &inBuffer, MAX_MSG_LEN, 0, (struct sockaddr *) &fromAddr, &size ) > 0)
-                    {
-                        strcpy(outBuffer, inBuffer);
-
-                        /// send back to client
-                        bytesSent = send(clientSock, (char *) &outBuffer, strlen(outBuffer), 0);
-                        if ( bytesSent < 0 || bytesSent != strlen(outBuffer) )
-                        {
-                            cout << "Client Handler: send() failed" << endl;
-                            close(clientSock);
-                            exit(1);
-                        }
-
-                        memset(&inBuffer, 0, sizeof(inBuffer));
-                        memset(&outBuffer, 0, sizeof(outBuffer));
-                    }
-                    close(send_sock);
-
-                    set_trans = false;
-                    memset(&trans, 0, sizeof(trans));
-                }
 
             } /// End of the client handler while loop
         }
@@ -289,3 +162,140 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+
+
+
+            //     /// Receive client message
+            //     while ((len = recv(clientSock, (char *)&inBuffer, MAX_MSG_LEN, 0)) > 0)
+            //     {
+            //         cout << "Client handler: received " << len << endl;
+            //         if (set_data || set_trans ){
+            //             if ( set_data ) { strncat(data, inBuffer, len); }
+            //             else { strncat(data, inBuffer, len); }
+            //         }
+            //         else
+            //         {
+            //             if ( strncmp(inBuffer, "EXT", 3) == 0 )
+            //             {
+            //                 cout << "Client handler: closing connection with client" << endl;
+            //                 close(clientSock);
+            //                 exit(1); 
+            //             }
+            //             else if ( strncmp(inBuffer, "SET", 3) == 0 )
+            //             {
+            //                 cout << "Client handler: setting data for client" << endl;
+            //                 memset(&data, 0, sizeof(data));
+            //                 strcpy(data, inBuffer + 3);
+            //                 set_data = true;
+            //             }
+            //             else if ( strncmp(inBuffer, "TRN", 3) == 0 )
+            //             {
+            //                 strcpy(trans, inBuffer + 3);
+            //                 cout << "Client handler: setting transformation sequence for client" << endl;
+            //                 memset(&trans, 0, sizeof(trans));
+            //                 set_trans = true;
+            //             }
+            //             else if ( strncmp(inBuffer, "OFF", 3) == 0 )
+            //             {
+            //                 cout << "Client handler: turning off microservice server" << endl;
+            //                 /// Turn service off and let client know
+            //                 /// Need to parse out the service number
+            //                 /// Send the right signal to the correct pid
+            //                 /// Let client know if sucess or not
+            //                 continue;
+            //             }
+            //             else if ( strncmp(inBuffer, "ONS", 3) == 0 )
+            //             {
+            //                 cout << "Client handler: turning on microservice server" << endl;
+            //                 /// Turn on service and let client know if successful
+            //                 /// Need to parse out the service number and port
+            //                 /// Start the correct process with the right arguments
+            //                 /// Let the client know if success or not
+            //                 continue;
+            //             }
+            //         }
+
+            //         memset(&inBuffer, 0, sizeof(inBuffer));
+            //     }   //// End of receving client msg while loop
+
+
+            //     if ( set_data ) {
+            //         cout << "Client handler: client data -> " << data << endl; 
+            //         set_data = false; 
+            //     }
+            //     else if ( set_trans )
+            //     {
+            //         cout << "Client handler: client transformation -> " << trans << endl;
+            //         /// Connect to the correct service
+            //         int send_sock;
+            //         struct sockaddr_in servAddr;
+            //         struct sockaddr_in fromAddr;
+            //         unsigned int size;
+
+            //         int msgLen;
+            //         int bytesSent;
+
+            //         /// Create a UDP socket
+            //         send_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            //         if ( send_sock < 0)
+            //         {
+            //             cerr << "Client handler: socket() failed" << endl;
+            //             close(clientSock);
+            //             exit(1);
+            //         }
+
+
+            //         /// Free up the port
+            //         int opt = 1;
+            //         if ( setsockopt(send_sock, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(int)) < 0 )
+            //         {
+            //             cout << "Client handler: setsockopt() failed" << endl;
+            //             close(clientSock);
+            //             exit(1);
+            //         }
+                    
+
+            //         /// Initialize server information
+            //         memset(&servAddr, 0, sizeof(servAddr));
+            //         servAddr.sin_family = AF_INET;
+            //         servAddr.sin_port = htons(services[0].port_num);
+            //         servAddr.sin_addr.s_addr = inet_addr(services[0].address.c_str());
+
+            //         msgLen = strlen(data);
+
+
+            //         /// Send data
+            //         bytesSent = sendto(send_sock, (char *) &data, msgLen, 0, (struct sockaddr *) &servAddr, sizeof(servAddr));
+            //         if ( bytesSent != msgLen )
+            //         {
+            //             cout << "Client handling: error in sending" << endl;
+            //             close(clientSock);
+            //             exit(1);
+            //         }
+
+            //         /// Receive data
+            //         byteRcv = 0;
+            //         int len;
+            //         size = sizeof(fromAddr);
+            //         while ( len = recvfrom(send_sock, (char *) &inBuffer, MAX_MSG_LEN, 0, (struct sockaddr *) &fromAddr, &size ) > 0)
+            //         {
+            //             strcpy(outBuffer, inBuffer);
+
+            //             /// send back to client
+            //             bytesSent = send(clientSock, (char *) &outBuffer, strlen(outBuffer), 0);
+            //             if ( bytesSent < 0 || bytesSent != strlen(outBuffer) )
+            //             {
+            //                 cout << "Client Handler: send() failed" << endl;
+            //                 close(clientSock);
+            //                 exit(1);
+            //             }
+
+            //             memset(&inBuffer, 0, sizeof(inBuffer));
+            //             memset(&outBuffer, 0, sizeof(outBuffer));
+            //         }
+            //         close(send_sock);
+
+            //         set_trans = false;
+            //         memset(&trans, 0, sizeof(trans));
+            //     }
