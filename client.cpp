@@ -5,7 +5,7 @@
 #include <cstring>      /// memset()
 #include <unistd.h>     /// close()
 
-#define MAX_MSG_SIZE 128
+#define MAX_MSG_SIZE 100
 
 using namespace std;
 
@@ -19,10 +19,9 @@ int main(int argc, char *argv[])
     struct sockaddr_in server_addr;
     char inBuffer[MAX_MSG_SIZE];
     char outBuffer[MAX_MSG_SIZE];
-    char input[MAX_MSG_SIZE];
-    unsigned int size;
+    char msg[MAX_MSG_SIZE];
     int bytesRcv;
-    int i;
+    bool terminate = false;
 
     bool hasMsg = false;                        /// Flag that makes sure that the client has data to transform
 
@@ -66,112 +65,80 @@ int main(int argc, char *argv[])
     cout << "Here" << endl;
 
     /// Run until client exits
-    while ( 1 )
+    while (!terminate)
     {
         memset(&inBuffer, 0, sizeof(inBuffer));
         memset(&outBuffer, 0, sizeof(outBuffer));
 
         cout << "Actions" << endl
              << "0 - Exit" << endl
-             << "1 - Set data" << endl
-             << "2 - Transform data" << endl
-             << "3 - Turn on a service" << endl
-             << "4 - Turn off a service" << endl
+             << "1 - Set message" << endl
+             << "2 - Transfomation" << endl
              << "Please enter an option: ";
-        fgets(input, MAX_MSG_SIZE, stdin);
+        fgets(msg, MAX_MSG_SIZE, stdin);
 
-        if ( strncmp(input, "0", 1) == 0 )
+        if (strncmp(msg, "0", 1) == 0)                          /// Case when client wants to exit
         {
-            cout << "Shutting down connection with master server..." << endl;
+            cout << "client: Shutting down service" << endl;
+            terminate = true;
             strcpy(outBuffer, "EXT");
-            if ( sendData(client_sock, (char *)&outBuffer, strlen(outBuffer)) == -1)
-            {
-                cout << "Could not disconnect from the server" << endl;
-                continue;
+
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
+                cerr << "client: Might not be disconnected from server" << endl;
+                close(client_sock);
+                exit(1);
             }
-            cout << "Goodvbye!" << endl;
+
             close(client_sock);
             exit(0);
         }
-
-        else if ( strncmp(input, "1", 1) == 0 )
+        else if (strncmp(msg, "1", 1) == 0)                    /// Case when client wants to set new data
         {
             strcpy(outBuffer, "SET");
-            memset(&input, 0, sizeof(input));
+            cout << "Enter message:" << endl;
+            fgets(msg, MAX_MSG_SIZE, stdin);
+            strncat(outBuffer, msg, strlen(msg));
 
-            cout << "Enter your data (Please less than 120 chars):" << endl;
-            fgets(input, MAX_MSG_SIZE - 3, stdin);
-            size = strlen(input);
-            if ( sendData(client_sock, (char *)&outBuffer, size) == -1 )
-            {
-                cout << "Could not send data to server" << endl;
-                continue;
-            } 
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
+                cerr << "client: could not send message to master server" << endl;
+                close(client_sock);
+                exit(1);
+            }
 
-            hasMsg = true;       
-
+            hasMsg = true;
         }
-
-        else if ( strncmp(input, "2", 1) == 0 )
+        else if (strncmp(msg, "2", 1) == 0)                   /// Case when client wants to transform data
         {
-            if ( !hasMsg )
-            {
-                cout << "Need a data to transform" << endl;
-                continue; 
+            if ( !hasMsg ) {                                  /// Case when client does not have data to transform
+                cout << "client: You do not have data to transform" << endl;
+                continue;
             }
 
-            bool validInput = true;
             strcpy(outBuffer, "TRN");
-            memset(&input, 0, sizeof(input));
+            cout << "Enter transformation sequence:" << endl;
+            fgets(msg, MAX_MSG_SIZE, stdin);
+            strncat(outBuffer, msg, strlen(msg));
 
-            cout << "Enter your transformation sequence (1-6):" << endl;
-            fgets(input, MAX_MSG_SIZE - 3, stdin);
-            size = strlen(input);
-
-            /// Checking for non-numeric transformation
-            for (i = 0; i < size; i++)
-            {
-                if( isalpha(outBuffer[i]) ) 
-                {
-                    cout << "Only input integers from 1 to 6" << endl;
-                    validInput = false;
-                    break;
-                }
+            if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1 ) {
+                cerr << "client: could not send transformation sequence to  master server" << endl;
+                close(client_sock);
+                exit(1);
             }
 
-            if ( !validInput )
+            while ( bytesRcv = recv(client_sock, (char *) &inBuffer, strlen(outBuffer) - 3, 0) > 0 )
             {
-                continue;
+                cout << "Received: " << inBuffer << endl;
+                memset(&inBuffer, 0, sizeof(inBuffer));
             }
-
-            if ( sendData(client_sock, (char *)&outBuffer, size) == -1 )
-            {
-                cout << "Could not send data to server" << endl;
-                continue;
-            }
-
-            /// Receive transformed data
-
-            bytesRcv = recv(client_sock, (char *) &inBuffer, MAX_MSG_SIZE, 0);
-
-            if ( bytesRcv <= 0)
-            {
-                cout << "client recv() failed, or the connection is closed" << endl;
-            }
-
-            cout << "Transformed data: " << endl << inBuffer << endl;
 
         }
-
         else
         {
-            cout << "Unknown command" << endl;
             continue;
         }
-
-
     }
 
+    return 0;
 }
 
 
