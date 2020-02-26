@@ -62,25 +62,22 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    cout << "Here" << endl;
-
-    /// Run until client exits
-    while (!terminate)
+    /* Run until client exits */
+    while (1)
     {
-        memset(&inBuffer, 0, sizeof(inBuffer));
-        memset(&outBuffer, 0, sizeof(outBuffer));
-
+        memset(&msg, 0, MAX_MSG_SIZE);
+        memset(&inBuffer, 0, MAX_MSG_SIZE);
+        memset(&outBuffer, 0, MAX_MSG_SIZE);
         cout << "Actions" << endl
-             << "0 - Exit" << endl
-             << "1 - Set message" << endl
-             << "2 - Transfomation" << endl
-             << "Please enter an option: ";
+            << "0 - Exit" << endl
+            << "1 - Set message" << endl
+            << "2 - Transfomation" << endl
+            << "Please enter an option: ";
         fgets(msg, MAX_MSG_SIZE, stdin);
 
         if (strncmp(msg, "0", 1) == 0)                          /// Case when client wants to exit
         {
             cout << "client: Shutting down service" << endl;
-            terminate = true;
             strcpy(outBuffer, "EXT");
 
             if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
@@ -89,15 +86,20 @@ int main(int argc, char *argv[])
                 exit(1);
             }
 
-            close(client_sock);
-            exit(0);
+            break;
         }
+
         else if (strncmp(msg, "1", 1) == 0)                    /// Case when client wants to set new data
         {
-            strcpy(outBuffer, "SET");
+            memset(&msg, 0, MAX_MSG_SIZE);
+
             cout << "Enter message:" << endl;
             fgets(msg, MAX_MSG_SIZE, stdin);
-            strncat(outBuffer, msg, strlen(msg));
+
+            string set_temp = "SET " + string(msg);
+            strcpy(outBuffer, set_temp.c_str());
+            
+            // cout << outBuffer << endl;
 
             if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
                 cerr << "client: could not send message to master server" << endl;
@@ -113,11 +115,19 @@ int main(int argc, char *argv[])
                 cout << "client: You do not have data to transform" << endl;
                 continue;
             }
+            
+            memset(&msg, 0, MAX_MSG_SIZE);
 
-            strcpy(outBuffer, "TRN");
             cout << "Enter transformation sequence:" << endl;
             fgets(msg, MAX_MSG_SIZE, stdin);
-            strncat(outBuffer, msg, strlen(msg));
+
+            string trn_temp = "TRN " + string(msg);
+            strcpy(outBuffer, trn_temp.c_str());
+
+
+            // cout << outBuffer << endl;
+            // char *ptr = (char *) outBuffer;
+            // int temp = *(ptr + 3) - '0';
 
             if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1 ) {
                 cerr << "client: could not send transformation sequence to  master server" << endl;
@@ -125,21 +135,19 @@ int main(int argc, char *argv[])
                 exit(1);
             }
 
-            while ( bytesRcv = recv(client_sock, (char *) &inBuffer, strlen(outBuffer) - 3, 0) > 0 )
+            bytesRcv = recv(client_sock, (char *) &inBuffer, strlen(inBuffer) - 3, 0);
+            if ( bytesRcv < 0 )
             {
-                cout << "Received: " << inBuffer << endl;
-                memset(&inBuffer, 0, sizeof(inBuffer));
+                cout << "Client: recv() failed" << endl;
+                break;
             }
-
-
+            cout << "Received: " << inBuffer << endl << endl;
         }
-        else
-        {
-            continue;
-        }
-    }
 
-    return 0;
+    }   
+
+    close(client_sock);
+    exit(0);
 }
 
 
