@@ -21,7 +21,6 @@ int main(int argc, char *argv[])
     char outBuffer[MAX_MSG_SIZE];
     char msg[MAX_MSG_SIZE];
     int bytesRcv;
-    bool terminate = false;
 
     bool hasMsg = false;                        /// Flag that makes sure that the client has data to transform
 
@@ -98,7 +97,7 @@ int main(int argc, char *argv[])
 
             string set_temp = "SET " + string(msg);
             strcpy(outBuffer, set_temp.c_str());
-            
+
             // cout << outBuffer << endl;
 
             if ( sendData(client_sock, (char *) &outBuffer, strlen(outBuffer)) == -1) {
@@ -115,7 +114,7 @@ int main(int argc, char *argv[])
                 cout << "client: You do not have data to transform" << endl;
                 continue;
             }
-            
+
             memset(&msg, 0, MAX_MSG_SIZE);
 
             cout << "Enter transformation sequence:" << endl;
@@ -144,7 +143,7 @@ int main(int argc, char *argv[])
             cout << "Received: " << inBuffer << endl << endl;
         }
 
-    }   
+    }
 
     close(client_sock);
     exit(0);
@@ -153,10 +152,10 @@ int main(int argc, char *argv[])
 
 
 /**
- * 
- * 
- * 
- * 
+ *
+ *
+ *
+ *
  * */
 int sendData(int sock, char *buffer, int msg_size) {
     int bytesSent = send(sock, buffer, msg_size, 0);

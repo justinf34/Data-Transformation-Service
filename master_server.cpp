@@ -22,11 +22,11 @@ using namespace std;
 
 /***
  *  This signal handler to gracefully exit
- *  by losing all the sockets 
+ *  by losing all the sockets
  **/
 void sig_handler(int sig);
 
-int transformData(char trans[], char data[]);
+int transformData(char *trans_seq, char *data);
 
 int clientSock;
 
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         cerr << "master_server: setsockopt () failed" << endl;
         exit(1);
     }
-    
+
     /* Binding to port */
     if ( bind(listener_sock, (struct sockaddr *) &server, sizeof(server)) < 0 )
     {
@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     while (1)
     {
         /* Accepting a connection */
-        if ( (clientSock = accept(listener_sock, NULL, NULL)) == -1) 
+        if ( (clientSock = accept(listener_sock, NULL, NULL)) == -1)
         {
             cerr << "master_server: accept() failed" << endl;
             exit(1);
@@ -127,11 +127,14 @@ int main(int argc, char *argv[])
             /* Keep running until the user wants to terminate connection */
             while ( 1 )
             {
+              memset(&inBuffer, 0, MAX_MSG_LEN);
+              memset(&outBuffer, 0, MAX_MSG_LEN);
+
                 bytesRcv = recv(clientSock, (char *) &inBuffer, MAX_MSG_LEN, 0);
                 if (bytesRcv <= 0)
                 {
                     cout << "Client handler: recv() failed, or the connection is closed." << endl;
-                    break; 
+                    break;
                 }
 
                 if ( strncmp(inBuffer, "EXT", 3) == 0 )
@@ -143,16 +146,17 @@ int main(int argc, char *argv[])
                 else if ( strncmp(inBuffer, "SET", 3) == 0 )
                 {
                     memset(&data, 0, MAX_MSG_LEN);
+
                     cout << "Client Handler: setting client data..." << endl;
                     ptr = strstr(inBuffer, " ")  + 1;
                     strcpy(data, ptr);
                     cout << "Client: " << data;
                 }
 
-
                 else if ( strncmp(inBuffer, "TRN", 3) == 0 )
                 {
                     memset(&trans, 0, MAX_MSG_LEN);
+
                     cout << "Client Handler: transforming client data..." << endl;
                      ptr = strstr(inBuffer, " ")  + 1;
                     strcpy(trans, ptr);
@@ -165,7 +169,7 @@ int main(int argc, char *argv[])
                         close(clientSock);
                         exit(-1);
                     }
-                    
+
                     /* Return transformed Data */
                     bytesSnt = send(clientSock, (char *) &data, strlen(data), 0);
                     if ( bytesSnt != strlen(data) )
@@ -176,11 +180,8 @@ int main(int argc, char *argv[])
 
                 }
 
-                memset(&inBuffer, 0, MAX_MSG_LEN);
-                memset(&outBuffer, 0, MAX_MSG_LEN);
-
             } /* End of the client receive loop  */
-            
+
             cout << "Client Handler: Disconnected with a client" << endl;
             close(clientSock);
             exit(0);
@@ -191,20 +192,18 @@ int main(int argc, char *argv[])
         {
             close(clientSock);
         }
-        
+
     }
 
     return 0;
 }
 
 
-int transformData(char trans[], char data[])
+int transformData(char *trans_seq, char *data)
 {
-    int bytesSnt, bytesRcv, i, serv_num;
-    
-    char *trans_seq = (char *)trans;
-    char *data_t = (char *)data;
-    int data_size = strlen(data_t);
+    int bytesRcv, i, serv_num;
+
+    int data_size = strlen(data);
     int trans_size = strlen(trans_seq);
     char inMsg[MAX_MSG_LEN];
 
@@ -213,6 +212,11 @@ int transformData(char trans[], char data[])
     struct sockaddr *server;
     socklen_t len;
     int port_num;
+
+
+    /* DELETE LATER! */
+    cout << "CLIENT DATA: " << data << endl;
+    cout << "CLIENT TRANS: " << trans_seq << endl;
 
     /* Create UDP Socket */
     sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
@@ -223,10 +227,9 @@ int transformData(char trans[], char data[])
     }
 
     /* Looping through the whole transformation sequence */
-    for (i = 0; i < trans_size; i++)
+    for (i = 0; i < trans_size - 1; i++)
     {
-        // serv_num = *(data_t + i) - '0';
-        serv_num = 5;
+        serv_num = *(trans_seq + i) - '0';
 
         /* Error checking the service numbers */
         if ( serv_num > 6 || serv_num < 0 )
@@ -234,7 +237,12 @@ int transformData(char trans[], char data[])
             cout << "Client handler: service " << serv_num << " does not exist!" << endl;
             return -1;
         }
-        
+
+        /* Need to check if the server is available */
+
+        /* DELETE LATER! */
+        cout << "Clien handler: service number -> " << serv_num << endl;
+
         /* Determining the port number */
         switch (serv_num)
         {
@@ -255,7 +263,7 @@ int transformData(char trans[], char data[])
         case 6:
             port_num = 8086;
             break;
-        
+
         default:
             port_num = -1;
             break;
@@ -267,43 +275,86 @@ int transformData(char trans[], char data[])
             return -1;
         }
 
-        /* Getting server info */
-        memset((char *) &mcr_server, 0, len);
-        memset((char *) server, 0, sizeof(server));
-        mcr_server.sin_family = AF_INET;
-        mcr_server.sin_port = htons(port_num);
-        server = (struct sockaddr *) &mcr_server;
-        len = sizeof(mcr_server);
-
-        if (inet_pton(AF_INET, SERVER_IP, &mcr_server.sin_addr)==0)
-        {
-            cerr << "Client handler: inet_pton() failed";
-            return -1;
-        }
-
-
-        /* Sending data to microservice */
-        if ( sendto(sock, data_t, data_size, 0, server, len) ==-1 )
-        {
-            cout << "Client handler: sendto() failed" << endl;
-            return -3;
-        }
-
-        /* Receiving the data */
-        memset(inMsg, 0, MAX_MSG_LEN);
-        if ( (bytesRcv = recvfrom(sock, (char *) &inMsg, MAX_MSG_LEN, 0, server, &len)) == -1 )
-        {
-            cout << "Client handler: recvfrom() failed" << endl;
-            return -3;
-        }
-
-        memset(data_t, 0, data_size);
-        strcpy(data_t, inMsg);
+        // /* Getting server info */
+        // memset((char *) &mcr_server, 0, len);
+        // memset((char *) server, 0, sizeof(server));
+        // mcr_server.sin_family = AF_INET;
+        // mcr_server.sin_port = htons(port_num);
+        // server = (struct sockaddr *) &mcr_server;
+        // len = sizeof(mcr_server);
+        //
+        // if (inet_pton(AF_INET, SERVER_IP, &mcr_server.sin_addr)==0)
+        // {
+        //     cerr << "Client handler: inet_pton() failed";
+        //     return -1;
+        // }
+        //
+        //
+        // /* Sending data to microservice */
+        // if ( sendto(sock, data_t, data_size, 0, server, len) ==-1 )
+        // {
+        //     cout << "Client handler: sendto() failed" << endl;
+        //     return -3;
+        // }
+        //
+        // /* Receiving the data */
+        // memset(inMsg, 0, MAX_MSG_LEN);
+        // if ( (bytesRcv = recvfrom(sock, (char *) &inMsg, MAX_MSG_LEN, 0, server, &len)) == -1 )
+        // {
+        //     cout << "Client handler: recvfrom() failed" << endl;
+        //     return -3;
+        // }
+        //
+        // memset(data_t, 0, data_size);
+        // strcpy(data_t, inMsg);
     }
+
+    /* Getting server info */
+    // memset((char *) &mcr_server, 0, len);
+    // memset((char *) server, 0, sizeof(server));
+    port_num = 8085;                                      /// DELETE LATER!
+    mcr_server.sin_family = AF_INET;
+    mcr_server.sin_port = htons(port_num);
+    server = (struct sockaddr *) &mcr_server;
+    len = sizeof(mcr_server);
+
+    if (inet_pton(AF_INET, SERVER_IP, &mcr_server.sin_addr)==0)
+    {
+        cerr << "Client handler: inet_pton() failed";
+        return -1;
+    }
+
+
+    /* Sending data to microservice */
+    if ( sendto(sock, data, data_size, 0, server, len) ==-1 )
+    {
+        cout << "Client handler: sendto() failed" << endl;
+        return -1;
+    }
+
+    /* Receiving the data */
+    memset(&inMsg, 0, MAX_MSG_LEN);
+    if ( (bytesRcv = recvfrom(sock, (char *) &inMsg, MAX_MSG_LEN, 0, server, &len)) == -1 )
+    {
+        cout << "Client handler: recvfrom() failed" << endl;
+        return -1;
+    }
+
+    cout << "After transformation: " << inMsg << endl;
+
+    memset(data, 0, data_size);
+    strcpy(data, inMsg);
 
     return 0;
 
 }
+
+
+
+
+
+
+
 
 
 int microserv_connect(struct service services[], int serv_num, int port_num)
@@ -314,7 +365,7 @@ int microserv_connect(struct service services[], int serv_num, int port_num)
     int sock;
 
     /* Creating a UDP socket */
-    
+
     if ( (sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1 )
     {
         cout << "Client handler: socket() failed" << endl;
@@ -333,7 +384,7 @@ int microserv_connect(struct service services[], int serv_num, int port_num)
     services[serv_num - 1].len = len;
 
     return 0;
-    
+
 }
 
 
@@ -357,7 +408,7 @@ int microserv_connect(struct service services[], int serv_num, int port_num)
 //         case 5:
 //             args = {"./UD5", port_num};
 //             break;
-    
+
 //     }
 
 //     pid = fork();
@@ -366,7 +417,7 @@ int microserv_connect(struct service services[], int serv_num, int port_num)
 //         cout << "Client handler: fork() failed" << endl;
 //         exit(-1);
 //     }
-    
+
 //     if (pid == 0)
 //     {
 //         exec(arg[0], arg);
@@ -376,6 +427,6 @@ int microserv_connect(struct service services[], int serv_num, int port_num)
 
 //     else
 //     {
-        
+
 //     }
 // }
