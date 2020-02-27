@@ -6,11 +6,11 @@
 #include <unistd.h>     					// for close()
 #include <cstring>      					// for memset()
 #include <csignal>
-#include "udp_serv.h"							// initSock()
+#include "udp_serv.h"						// initSock()
 
 using namespace std;
 
-int serverSock;										/// server socket
+int serverSock;								/// server socket
 
 /**
 * Handles incoming signals
@@ -25,56 +25,56 @@ void signalHandler ( int sig ){
 /* Main driver for this server */
 int main(int argc, char *argv[])
 {
-			/* Assign signal handler */
-	    signal(SIGTERM, signalHandler);
-	    signal(SIGINT, signalHandler);
+	/* Assign signal handler */
+	signal(SIGTERM, signalHandler);
+	signal(SIGINT, signalHandler);
 
-	    struct sockaddr_in serverAddr;
-	    struct sockaddr_in clientAddr;
-	    unsigned int len = sizeof(serverAddr);
+	struct sockaddr_in serverAddr;
+	struct sockaddr_in clientAddr;
+	unsigned int len = sizeof(serverAddr);
 
-	    char inBuffer[MAX_MSG_LEN];																	/// buffer container for incoming messages
-	    char outBuffer[MAX_MSG_LEN];																/// buffer container for outgoing messages
-	    int bytesRcv;
+	char inBuffer[MAX_MSG_LEN];								/// buffer container for incoming messages
+	char outBuffer[MAX_MSG_LEN];							/// buffer container for outgoing messages
+	int bytesRcv;
 
-			/* Argument error checking */
-	    if ( argc != 2)
-	    {
-	        cerr << "Usage: " << argv[0] << " <Port num>" << endl;
-	    }
+	/* Argument error checking */
+	if ( argc != 2)
+	{
+		cerr << "Usage: " << argv[0] << " <Port num>" << endl;
+	}
 
-			/* Initializin server socket */
-			int initSock = init_servSock(serverSock, atoi(argv[1]), &serverAddr);
-			if ( initSock < 0 )
-			{
-				cout << "UDP identity: could not initialize socket" << endl;
-				exit(-1);
-			}
+	/* Initializing server socket */
+	int initSock = init_servSock(serverSock, atoi(argv[1]), &serverAddr);
+	if ( initSock < 0 )
+	{
+		cout << "UDP identity: could not initialize socket" << endl;
+		exit(-1);
+	}
 
-			/* Run forever until a terminate signal arrives */
-	    while (1)
-	    {
-					/* Clearing buffers */
-					memset(&inBuffer, 0, MAX_MSG_LEN);
-					memset(&outBuffer, 0, MAX_MSG_LEN);
+	/* Run forever until a terminate signal arrives */
+	while (1)
+	{
+		/* Clearing buffers */
+		memset(&inBuffer, 0, MAX_MSG_LEN);
+		memset(&outBuffer, 0, MAX_MSG_LEN);
 
-					/* Receive data from clients */
-					bytesRcv = recvfrom(serverSock, inBuffer, 1024, 0, (struct sockaddr*) &clientAddr, &len);
-	        if ( bytesRcv < 0 ) {
-	            cerr << "UDP identity: recvfrom() failed, or connection closed" << endl;
-	            exit(-1);
-	        }
+		/* Receive data from clients */
+		bytesRcv = recvfrom(serverSock, inBuffer, 1024, 0, (struct sockaddr*) &clientAddr, &len);
+		if ( bytesRcv < 0 ) {
+			cerr << "UDP identity: recvfrom() failed, or connection closed" << endl;
+			exit(-1);
+		}
 
-	        cout << "UDP identity Client " << inet_ntoa(clientAddr.sin_addr) << ":" << clientAddr.sin_port << ": " << inBuffer << endl;
+		cout << "UDP identity Client " << inet_ntoa(clientAddr.sin_addr) << ":" << clientAddr.sin_port << ": " << inBuffer << endl;
 
-					/* Sent data back to client */
-	       	sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
+		/* Sent data back to client */
+		sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
 
-					/* Clearing buffer */
-	        memset(&inBuffer, 0, MAX_MSG_LEN);
-	        memset(&outBuffer, 0, MAX_MSG_LEN);
-	    }
+		/* Clearing buffer */
+		memset(&inBuffer, 0, MAX_MSG_LEN);
+		memset(&outBuffer, 0, MAX_MSG_LEN);
+	}
 
-	    close(serverSock);
-	    return 0;
+	close(serverSock);
+	return 0;
 }

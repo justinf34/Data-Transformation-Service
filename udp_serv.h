@@ -1,19 +1,22 @@
-#include <iostream>     /// cout
-#include <sys/socket.h> /// socket(), bind(), sendto(), and recv
-#include <arpa/inet.h>  /// for sockaddr_in, inet_addr()
-#include <stdlib.h>     /// for atoi(), exit()
-#include <cstring>      /// for memset()
-#include <unistd.h>     /// for close()
+#include <iostream>       // cout
+#include <sys/socket.h>   // socket(), bind(), sendto(), and recv
+#include <arpa/inet.h>    // for sockaddr_in, inet_addr()
+#include <stdlib.h>       // for atoi(), exit()
+#include <cstring>        // for memset()
+#include <unistd.h>       // for close()
 
 using namespace std;
 
 #define MAX_MSG_LEN 128       /// Max size that the server can recieve
 
-
-/***
-*
-*
-***/
+/**
+ *  Creates and initializes a UDP socket for a server
+ * 
+ * @param sock a the UDP socket number
+ * @param port_num the number of the port which `sock` will be binded to 
+ * @param serverAddr a pointer to a struct containing server address
+ * @return an error code which indicates if the initialization of socket is successful
+ */
 int init_servSock(int &sock, int port_num, sockaddr_in *serverAddr)
 {
 
