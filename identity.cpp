@@ -1,22 +1,28 @@
-#include <iostream>     /// cout
-#include <sys/socket.h> /// socket(), bind(), sendto(), and recv
-#include <arpa/inet.h>  /// for sockaddr_in, inet_addr()
+#include <iostream>     					// cout
+#include <sys/socket.h> 					// socket(), bind(), sendto(), recvfrom()
+#include <arpa/inet.h>  					// for sockaddr_in, inet_addr()
 #include <netinet/in.h>
-#include <stdlib.h>     /// for atoi(), exit()
-#include <unistd.h>     /// for close()
-#include <cstring>      /// for memset()
+#include <stdlib.h>     					// for atoi(), exit()
+#include <unistd.h>     					// for close()
+#include <cstring>      					// for memset()
 #include <csignal>
-#include "udp_serv.h"
+#include "udp_serv.h"							// initSock()
 
 using namespace std;
 
-int serverSock;
+int serverSock;										/// server socket
 
+/**
+* Handles incoming signals
+*
+* @param sig the signal code that this process receives
+*/
 void signalHandler ( int sig ){
 	close(serverSock);
 	exit(0);
 }
 
+/* Main driver for this server */
 int main(int argc, char *argv[])
 {
 			/* Assign signal handler */
@@ -27,10 +33,11 @@ int main(int argc, char *argv[])
 	    struct sockaddr_in clientAddr;
 	    unsigned int len = sizeof(serverAddr);
 
-	    char inBuffer[MAX_MSG_LEN];
-	    char outBuffer[MAX_MSG_LEN];
+	    char inBuffer[MAX_MSG_LEN];																	/// buffer container for incoming messages
+	    char outBuffer[MAX_MSG_LEN];																/// buffer container for outgoing messages
 	    int bytesRcv;
 
+			/* Argument error checking */
 	    if ( argc != 2)
 	    {
 	        cerr << "Usage: " << argv[0] << " <Port num>" << endl;
@@ -47,9 +54,9 @@ int main(int argc, char *argv[])
 			/* Run forever until a terminate signal arrives */
 	    while (1)
 	    {
+					/* Clearing buffers */
 					memset(&inBuffer, 0, MAX_MSG_LEN);
 					memset(&outBuffer, 0, MAX_MSG_LEN);
-
 
 					/* Receive data from clients */
 					bytesRcv = recvfrom(serverSock, inBuffer, 1024, 0, (struct sockaddr*) &clientAddr, &len);
@@ -63,6 +70,7 @@ int main(int argc, char *argv[])
 					/* Sent data back to client */
 	       	sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
 
+					/* Clearing buffer */
 	        memset(&inBuffer, 0, MAX_MSG_LEN);
 	        memset(&outBuffer, 0, MAX_MSG_LEN);
 	    }
