@@ -75,11 +75,12 @@ int main(int argc, char *argv[])
 			if ( (ascii_val % 2) == 0 ) { inBuffer[i] = 48; }
 			else { inBuffer[i] = 49; }
 		}
+		inBuffer[n] = 0;
 
 		cout << "UDP yours Client " << inet_ntoa(clientAddr.sin_addr) << ":" << clientAddr.sin_port << ": " << inBuffer << endl;
 
 		/* Sent data back to client */
-		sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
+		sendto(serverSock, inBuffer, bytesRcv, 0, (struct sockaddr *) &clientAddr, len);
 
 		/* Clearing buffers */
 		memset(&inBuffer, 0, MAX_MSG_LEN);

@@ -57,7 +57,8 @@ void signalHandler(int sig)
 
 /***
 * Transforms client data by sending data to microservice servers
-***/
+*
+**/
 int transformData(char *trans_seq, char *data);
 
 /* Main driver for master_server.cpp */
@@ -300,8 +301,8 @@ int transformData(char *trans_seq, char *data)
 {
     int bytesRcv, j, serv_num;
 
-    int data_size = strlen(data);                                               // size of client data
     int trans_size = strlen(trans_seq);                                         // number of transformations
+    int data_size = strlen(data) + 1;
     char inMsg[MAX_MSG_LEN];                                                    // data after sending it to a single server
 
     int sock;                                                                   // socket to send to microservice servers
@@ -352,7 +353,7 @@ int transformData(char *trans_seq, char *data)
             port_num = 8085;
             break;
         case 6:                 // Yours
-            port_num = 8089;
+            port_num = 8086;
             break;
         default:
             port_num = -1;
@@ -390,7 +391,7 @@ int transformData(char *trans_seq, char *data)
 
         /* Receiving the data */
         memset(&inMsg, 0, MAX_MSG_LEN);
-        if ( (bytesRcv = recvfrom(updSock, (char *) &inMsg, MAX_MSG_LEN, 0, server, &len)) == -1 )
+        if ( (bytesRcv = recvfrom(updSock, (char *) &inMsg, data_size, 0, server, &len)) == -1 )
         {
             cout << "Client handler: Timeout reached. Closing connection with client..." << endl;
             return -1;
@@ -398,7 +399,7 @@ int transformData(char *trans_seq, char *data)
 
         cout << "After transformation: " << inMsg << endl;
 
-        memset(data, 0, data_size);
+        memset(data, 0, MAX_MSG_LEN);
         strcpy(data, inMsg);
 
     }

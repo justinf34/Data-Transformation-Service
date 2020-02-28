@@ -60,7 +60,7 @@ int main(int argc, char *argv[])
 		memset(&outBuffer, 0, MAX_MSG_LEN);
 
 		/* Receive data from clients */
-		bytesRcv = recvfrom(serverSock, inBuffer, 1024, 0, (struct sockaddr*) &clientAddr, &len);
+		bytesRcv = recvfrom(serverSock, inBuffer, MAX_MSG_LEN, 0, (struct sockaddr*) &clientAddr, &len);
 		if ( bytesRcv < 0 ) {
 			cerr << "UDP identity: recvfrom() failed, or connection closed" << endl;
 			exit(-1);
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 		cout << "UDP identity Client " << inet_ntoa(clientAddr.sin_addr) << ":" << clientAddr.sin_port << ": " << inBuffer << endl;
 
 		/* Sent data back to client */
-		sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
+		sendto(serverSock, inBuffer, bytesRcv, 0, (struct sockaddr *) &clientAddr, len);
 
 		/* Clearing buffer */
 		memset(&inBuffer, 0, MAX_MSG_LEN);

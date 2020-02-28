@@ -65,15 +65,16 @@ int main(int argc, char *argv[])
 		/* Reverse client data */
 		int i;
 		int n = strlen(inBuffer);
-		for (i=0; i < n / 2; i++)
+		for (i=0; i < (n / 2); i++)
 		{
 			swap(inBuffer[i], inBuffer[n - i - 1]);
 		}
+		inBuffer[n] = 0;
 
 		cout << "UDP reverse: After transformation -> " << inBuffer << endl;
 
 		/* Sent data back to client */
-		sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
+		sendto(serverSock, inBuffer, bytesRcv, 0, (struct sockaddr *) &clientAddr, len);
 
 		/* Clearing buffer */
 		memset(&inBuffer, 0, MAX_MSG_LEN);

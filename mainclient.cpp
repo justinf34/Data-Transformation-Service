@@ -152,8 +152,8 @@ int main(int argc, char *argv[])
             }
 
             /* Receiving data from the server */
-            bytesRcv = recv(client_sock, (char *) &inBuffer, strlen(inBuffer) - 3, 0);
-            if ( bytesRcv < 1 )
+            bytesRcv = recv(client_sock, (char *) &inBuffer, MAX_MSG_SIZE, 0);
+            if ( bytesRcv < 0 )
             {
                 cout << "Client: recv() failed" << endl;
                 break;

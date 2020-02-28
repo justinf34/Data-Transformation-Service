@@ -70,7 +70,8 @@ int main(int argc, char *argv[])
 
 		/* Encode in using Ceasar cipher */
 		int i;
-		for (i=0; i < strlen(inBuffer); i++)
+		int n = strlen(inBuffer);
+		for (i=0; i < n; i++)
 		{
 			if ( isalpha(inBuffer[i]) != 0 )											// Check if it is a letter
 			{
@@ -80,9 +81,10 @@ int main(int argc, char *argv[])
 				{ inBuffer[i] = char(int(inBuffer[i] + 13 - 97) % 26 + 97); }
 			}
 		}
+		inBuffer[n] = 0;
 
 		/* Sent data back to client */
-		sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
+		sendto(serverSock, inBuffer, bytesRcv, 0, (struct sockaddr *) &clientAddr, len);
 
 		/* Clearing buffer */
 		memset(&inBuffer, 0, MAX_MSG_LEN);

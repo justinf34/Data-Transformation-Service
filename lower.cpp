@@ -72,11 +72,12 @@ int main(int argc, char *argv[])
 		{
 				inBuffer[i] = tolower(inBuffer[i]);
 		}
+		inBuffer[n] = 0;
 
 		cout << "UDP lower Client " << inet_ntoa(clientAddr.sin_addr) << ":" << clientAddr.sin_port << ": " << inBuffer << endl;
 
 		/* Sent data back to client */
-		sendto(serverSock, inBuffer, strlen(inBuffer), 0, (struct sockaddr *) &clientAddr, len);
+		sendto(serverSock, inBuffer, bytesRcv, 0, (struct sockaddr *) &clientAddr, len);
 
 		/* Clearing buffer */
 		memset(&inBuffer, 0, MAX_MSG_LEN);
