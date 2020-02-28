@@ -103,6 +103,13 @@ int main(int argc, char *argv[])
             cout << "Enter message:" << endl;
             fgets(msg, MAX_MSG_SIZE-4, stdin);
 
+            /* Checking if clients message is empty */
+            if ( strlen(msg) < 2 )
+            {
+                cout << "client: Please enter a message " << strlen(msg) << endl;
+                continue;
+            }
+
             string set_temp = "SET " + string(strtok(msg, "\n"));               // SET - tells that data is to be stored as client data
             strcpy(outBuffer, set_temp.c_str());
 
@@ -127,6 +134,13 @@ int main(int argc, char *argv[])
             cout << "Enter transformation sequence (1-identity, 2-reverse, 3-upper, 4-lower, 5-ceasar, 6-yours):" << endl;
             fgets(msg, MAX_MSG_SIZE-4, stdin);
 
+            /* Checking if clients message is empty */
+            if ( strlen(msg) < 2 )
+            {
+                cout << "client: Please enter a transformation sequence " << strlen(msg) << endl;
+                continue;
+            }
+
             string trn_temp = "TRN " + string(strtok(msg, "\n"));               // TRN - tells the server that it needs to perform trnasformations on client data
             strcpy(outBuffer, trn_temp.c_str());
 
@@ -139,7 +153,7 @@ int main(int argc, char *argv[])
 
             /* Receiving data from the server */
             bytesRcv = recv(client_sock, (char *) &inBuffer, strlen(inBuffer) - 3, 0);
-            if ( bytesRcv < 0 )
+            if ( bytesRcv < 1 )
             {
                 cout << "Client: recv() failed" << endl;
                 break;
