@@ -28,6 +28,7 @@ int main(int argc, char *argv[])
 	/* Assign signal handler */
 	signal(SIGTERM, signalHandler);
 	signal(SIGINT, signalHandler);
+	signal(SIGKILL, signalHandler);
 
 	struct sockaddr_in serverAddr;
 	struct sockaddr_in clientAddr;

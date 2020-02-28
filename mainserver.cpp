@@ -3,6 +3,7 @@
 #include <stdlib.h>         // exit()
 #include <stdio.h>          // memset()
 #include <unistd.h>         // close
+#include <csignal>          // signal
 
 /* Network related */
 #include <sys/socket.h>     // socket(), connect(), send(), and recv()
@@ -20,29 +21,43 @@ using namespace std;
 #define MAX_MSG_LEN 128
 #define SERVER_IP "127.0.0.1"
 
+
+int clientSock;                             /// Client socket
+int listener_sock;                          /// Client listener socket
+int service_pid[6];                          /// Container for all process id of microservice servers
+
+/***
+ *  Kills all microservice servers by sending a SIGKILL signal
+ ***/
+void kill_servers()
+{
+    cout << "master server: closing microservice servers..." << endl;
+    int i;
+    for (i = 0; i < 6; i++ )
+    {
+        if ( kill(service_pid[i], SIGKILL) == -1 )
+        {
+            cout << "master server: could not kill process" << service_pid[i] << endl;
+        }
+    }
+}
+
 /***
  *  This signal handler to gracefully exit
  *  by losing all the sockets
  ***/
-void sig_handler(int sig);
+void signalHandler(int sig)
+{
+    close(clientSock);
+    close(listener_sock);
+    kill_servers();
+    exit(0);
+}
 
 /***
 * Transforms client data by sending data to microservice servers
 ***/
 int transformData(char *trans_seq, char *data);
-
-/***
-* Turns on a microservice server
-***/
-
-/***
-* Turn off a microservice server
-***/
-
-
-int clientSock;                             /// Client socket
-int listener_sock;                          /// Client listener socket
-
 
 /* Main driver for master_server.cpp */
 int main(int argc, char *argv[])
@@ -50,7 +65,10 @@ int main(int argc, char *argv[])
     int pid;                                /// Client handler process process id
     struct sockaddr_in server;
 
-    /* TO DO: Set up signal handler */
+	/* Assign signal handler */
+	signal(SIGTERM, signalHandler);
+	signal(SIGINT, signalHandler);
+	signal(SIGKILL, signalHandler);
 
     /* Error handling for invalid arguments */
     if (argc != 2)
@@ -69,7 +87,7 @@ int main(int argc, char *argv[])
     /* Set up the transposrt-level end point to use TCP */
     if ((listener_sock = socket(AF_INET, SOCK_STREAM, 0)) == -1)
     {
-        cerr << "master_server: socket() failed" << endl;
+        cerr << "master server: socket() failed" << endl;
         exit(1);
     }
 
@@ -77,15 +95,65 @@ int main(int argc, char *argv[])
     int yes = 1;
     if (setsockopt(listener_sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)))
     {
-        cerr << "master_server: setsockopt () failed" << endl;
+        cerr << "master server: setsockopt () failed" << endl;
         exit(1);
     }
 
     /* Binding to port */
     if ( bind(listener_sock, (struct sockaddr *) &server, sizeof(server)) < 0 )
     {
-        cerr << "master_server: bind() failed" << endl;
+        cerr << "master server: bind() failed" << endl;
         exit(1);
+    }
+
+    /* Starting the microservice servers */
+    cout << "master server: starting microservice servers" << endl;
+
+    char *args[] = {"127.0.0.1", NULL, NULL};                   /// arguments for starting microservice server
+    string server_name;                                         /// binary file name of server
+    int i;
+
+    for ( i = 0; i < 6; i++ )
+    {
+        pid = fork();
+        if ( pid < 0 )                                            // Case when one forks failed
+        {
+            cout << "master server: Could not start one of the servers. Closing master server..." << endl;
+            /* kill all other servers */
+        }
+        else if ( pid == 0 )
+        {
+            switch (i)                                          // Choosing the right binary file and port num
+            {
+                case 0:
+                    args[1] = "8081";
+                    server_name = "./identity";
+                    break;
+                case 1:
+                    args[1] = "8082";
+                    server_name = "./reverse";
+                    break;
+                case 2:
+                    args[1] = "8083";
+                    server_name = "./upper";
+                    break;
+                case 3:
+                    args[1] = "8084";
+                    server_name = "./lower";
+                    break;
+                case 4:
+                    args[1] = "8085";
+                    server_name = "./ceasar";
+                    break;
+                case 5:
+                    args[1] = "8086";
+                    server_name = "./yours";
+                    break;
+            }
+            execve(server_name.c_str(), args, NULL);
+        }       
+        cout << "Server pid:" << pid << endl;
+        service_pid[i] = pid;                                      // add the pid to list so it can be killed later
     }
 
     /* Start listening for incoming connections */
@@ -116,6 +184,7 @@ int main(int argc, char *argv[])
 
             cerr << "master_server: fork() failed" << endl;
         }
+
         else if (pid == 0)
         {
             close(listener_sock);
@@ -179,6 +248,7 @@ int main(int argc, char *argv[])
 
                     /* Return transformed Data */
                     bytesSnt = send(clientSock, (char *) &data, strlen(data), 0);
+                    cout << "Client handler: sending " << bytesSnt << " bytes" << endl;
                     if ( bytesSnt != strlen(data) )
                     {
                         cout << "Client handler: send() failed" << endl;
@@ -208,7 +278,7 @@ int main(int argc, char *argv[])
 
 int transformData(char *trans_seq, char *data)
 {
-    int bytesRcv, i, serv_num;
+    int bytesRcv, j, serv_num;
 
     int data_size = strlen(data);                                               // size of client data
     int trans_size = strlen(trans_seq);                                         // number of transformations
@@ -234,9 +304,9 @@ int transformData(char *trans_seq, char *data)
     }
 
     /* Looping through the whole transformation sequence */
-    for (i = 0; i < trans_size; i++)
+    for (j = 0; j < trans_size; j++)
     {
-        serv_num = *(trans_seq + i) - '0';
+        serv_num = *(trans_seq + j) - '0';
 
         /* Error checking the service numbers */
         if ( serv_num > 6 || serv_num < 0 )
@@ -319,5 +389,6 @@ int transformData(char *trans_seq, char *data)
         strcpy(data, inMsg);
 
     }
+
     return 0;
 }
