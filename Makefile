@@ -23,3 +23,6 @@ identity: identity.cpp udp_serv.h
 
 yours: yours.cpp udp_serv.h
 	g++ yours.cpp -o yours
+
+clean:
+	rm mainclient mainserver reverse upper lower ceasar identity yours

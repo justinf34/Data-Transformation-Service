@@ -23,8 +23,9 @@ using namespace std;
 
 
 int clientSock;                             /// Client socket
+int updSock;                                /// UDP Socket for server
 int listener_sock;                          /// Client listener socket
-int service_pid[6];                          /// Container for all process id of microservice servers
+int service_pid[6];                         /// Container for all process id of microservice servers
 
 /***
  *  Kills all microservice servers by sending a SIGKILL signal
@@ -197,6 +198,24 @@ int main(int argc, char *argv[])
             char inBuffer[MAX_MSG_LEN];                                         /// buffer to store incoming messages
             char outBuffer[MAX_MSG_LEN];                                        /// buffer to send data to client
 
+            /* Create UDP Socket */
+            cout << "Client Handler: creating UDP socket" << endl;
+            updSock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
+            if ( updSock < 0 )
+            {
+                cerr << "Client handler: socket() failed" << endl;
+                return -1;
+            }
+
+            /* Set timeout for socket */
+            struct timeval timeout_val;
+            timeout_val.tv_sec = 1;
+            if ( setsockopt(updSock, SOL_SOCKET, SO_RCVTIMEO, &timeout_val, sizeof(timeout_val)) < 0 )
+            {
+                cout << "Client handler: setsockopt() failed" << endl;
+                return -1;
+            }
+
             /* Keep running until the user wants to terminate connection */
             while ( 1 )
             {
@@ -234,14 +253,15 @@ int main(int argc, char *argv[])
                     memset(&trans, 0, MAX_MSG_LEN);
 
                     cout << "Client Handler: transforming client data..." << endl;
-                     ptr = strstr(inBuffer, " ")  + 1;                          // parsing client transformations from message
+                    ptr = strstr(inBuffer, " ")  + 1;                          // parsing client transformations from message
                     strcpy(trans, ptr);
                     cout << "Client: " << trans << endl;
 
                     /* Transforming data */
                     if ( transformData(trans, data) < 0)
                     {
-                        cout << "Client handler: Bad client transformation " << endl;
+                        cout << "Client handler: Error occured in transforming data! " << endl;
+                        close(updSock);
                         close(clientSock);
                         exit(-1);
                     }
@@ -295,13 +315,6 @@ int transformData(char *trans_seq, char *data)
     cout << "CLIENT DATA: " << data << endl;
     cout << "CLIENT TRANS: " << trans_seq << endl;
 
-    /* Create UDP Socket */
-    sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
-    if ( sock < 0 )
-    {
-        cerr << "Client handler: socket() failed" << endl;
-        return -1;
-    }
 
     /* Looping through the whole transformation sequence */
     for (j = 0; j < trans_size; j++)
@@ -339,7 +352,7 @@ int transformData(char *trans_seq, char *data)
             port_num = 8085;
             break;
         case 6:                 // Yours
-            port_num = 8086;
+            port_num = 8089;
             break;
         default:
             port_num = -1;
@@ -369,7 +382,7 @@ int transformData(char *trans_seq, char *data)
         }
 
         /* Sending data to microservice */
-        if ( sendto(sock, data, data_size, 0, server, len) ==-1 )
+        if ( sendto(updSock, data, data_size, 0, server, len) ==-1 )
         {
             cout << "Client handler: sendto() failed" << endl;
             return -1;
@@ -377,9 +390,9 @@ int transformData(char *trans_seq, char *data)
 
         /* Receiving the data */
         memset(&inMsg, 0, MAX_MSG_LEN);
-        if ( (bytesRcv = recvfrom(sock, (char *) &inMsg, MAX_MSG_LEN, 0, server, &len)) == -1 )
+        if ( (bytesRcv = recvfrom(updSock, (char *) &inMsg, MAX_MSG_LEN, 0, server, &len)) == -1 )
         {
-            cout << "Client handler: recvfrom() failed" << endl;
+            cout << "Client handler: Timeout reached. Closing connection with client..." << endl;
             return -1;
         }
 
