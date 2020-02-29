@@ -1,4 +1,4 @@
-all: mainclient mainserver reverse upper lower ceasar identity yours
+all: mainclient mainserver reverse upper lower caesar identity yours
 
 mainclient: mainclient.cpp
 	g++ mainclient.cpp -o mainclient
@@ -15,8 +15,8 @@ upper: upper.cpp udp_serv.h
 lower: lower.cpp udp_serv.h
 	g++ lower.cpp -o lower
 
-ceasar: ceasar.cpp udp_serv.h
-	g++ ceasar.cpp -o ceasar
+ceasar: caesar.cpp udp_serv.h
+	g++ caesar.cpp -o caesar
 
 identity: identity.cpp udp_serv.h
 	g++ identity.cpp -o identity
@@ -25,4 +25,4 @@ yours: yours.cpp udp_serv.h
 	g++ yours.cpp -o yours
 
 clean:
-	rm mainclient mainserver reverse upper lower ceasar identity yours
+	rm mainclient mainserver reverse upper lower caesar identity yours

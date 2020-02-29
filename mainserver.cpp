@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
     /* Starting the microservice servers */
     cout << "master server: starting microservice servers" << endl;
 
-    char *args[] = {"127.0.0.1", NULL, NULL};                   /// arguments for starting microservice server
+    char *args[] = {NULL, NULL, NULL};                   /// arguments for starting microservice server
     string server_name;                                         /// binary file name of server
     int i;
 
@@ -125,34 +125,37 @@ int main(int argc, char *argv[])
         }
         else if ( pid == 0 )
         {
+            int udp_pnum = atoi(argv[1]) + i + 1;
+            string udp_pnum_str = to_string(udp_pnum);
+            args[1] = (char *) udp_pnum_str.c_str();
             switch (i)                                          // Choosing the right binary file and port num
             {
                 case 0:
-                    args[1] = "8081";
-                    server_name = "./identity";
+                    // args[1] = "8081";
+                    args[0] = "./identity";
                     break;
                 case 1:
-                    args[1] = "8082";
-                    server_name = "./reverse";
+                    // args[1] = "8082";
+                    args[0] = "./reverse";
                     break;
                 case 2:
-                    args[1] = "8083";
-                    server_name = "./upper";
+                    // args[1] = "8083";
+                    args[0] = "./upper";
                     break;
                 case 3:
-                    args[1] = "8084";
-                    server_name = "./lower";
+                    // args[1] = "8084";
+                    args[0] = "./lower";
                     break;
                 case 4:
-                    args[1] = "8085";
-                    server_name = "./ceasar";
+                    // args[1] = "8085";
+                    args[0] = "./caesar";
                     break;
                 case 5:
-                    args[1] = "8086";
-                    server_name = "./yours";
+                    // args[1] = "8086";
+                    args[0] = "./yours";
                     break;
             }
-            execve(server_name.c_str(), args, NULL);
+            execve(args[0], args, NULL);
         }       
         cout << "Server pid:" << pid << endl;
         service_pid[i] = pid;                                      // add the pid to list so it can be killed later
